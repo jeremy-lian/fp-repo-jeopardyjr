@@ -1,71 +1,70 @@
-### chap05/guess-server.py
-import roshambo3_2p_client as rlib
+import json
 from socket32 import create_new_socket
 
-HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
-PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
+HOST = '127.0.0.1'
+PORT = 65432
 
+def load_questions():
+    #retrieve question file
+    with open('questions.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return data['questions']
 
 def main():
-    #This is only to print who wins at the end
-    losses = 0
-    wins = 0
+    #load in the questions
+    questions = load_questions()
+
+    # for now just use the first question so this thing actually works
+    q = questions[0]
+
     with create_new_socket() as s:
-        # Bind socket to address and publish contact info
+        #server setup
         s.bind(HOST, PORT)
         s.listen()
-        # Updates name --->
-        print("RO-SHAM-BO server started. Listening on", (HOST, PORT))
+        print('Jeopardy server started. Listening on', (HOST, PORT))
 
-        print('## Welcome to Ro...Sham...BO! ##\nYou are Player #2\n')
-
-        # Define what the choices are
-        a = ("rock", "paper", "scissors")
-
-        # Answer incoming connection
-        conn2client, addr = s.accept()
-
+        #wait for a client to connect
+        conn, addr = s.accept()
         print('Connected by', addr)
 
-        with conn2client:
+        with conn:
+            # send the question
+            question_line = f"{q['category']} | ${q['value']} | {q['question']}"
+            conn.sendall('Q' + question_line)
 
-            while True:   # message processing loop
+            #wait for the client to register that it got the question
+            conn.recv()
 
-                # We receive the clients choice (player 1)
-                clientchoice = conn2client.recv()
+            #allow the client to buzz in
+            conn.sendall('B' + 'Buzz is open! Type b to buzz.')
 
-                # If there is no choice, we break out
-                if clientchoice == '':
-                    break
+            # grab whatever they send back
+            buzz_msg = conn.recv()
 
-                # Create a server choice for this connection
-                # After we receive an input from the server, we send it all
-                serverchoice= rlib.player_choice()
+            #if player buzzes in
+            if buzz_msg == 'B':
+                # allow them to answer
+                conn.sendall('A' + 'You buzzed first. Enter your answer:')
+                answer_msg = conn.recv()
 
-                #Send the server choice
-                conn2client.sendall(serverchoice)
+                #make sure the message isn't empty and starts with header A
+                if answer_msg != '' and answer_msg[0] == 'A':
+                    #clean up the player's answer
+                    player_answer = answer_msg[1:].strip().lower()
+                    correct_answer = q['answer'].strip().lower()
 
-                # Once a round is over on the client side, when we have the output, then print it
-                result_of_round = conn2client.recv()
+                    #temporary answer checker
+                    if player_answer == correct_answer:
+                        conn.sendall('R' + 'Correct! You earned 200 points.')
+                    else:
+                        conn.sendall('R' + f"Incorrect. Correct answer: {q['answer']}")
 
-                #Added this only to display final message of who won the game
-                if "You lose" in result_of_round:
-                    losses += 1
-                if "You win" in result_of_round:
-                    wins += 1
+                    # wait for the client to acknowledge
+                    conn.recv()
 
-                print(result_of_round)
-
-        if wins == 3:
-            print("Congratulations! You Win!\nDisconnected.\n")
-        if losses == 3:
-            print("You lost. Better luck next time!\nDisconnected.\n")
-
-        # end_of_game = conn2client.recv()
-        # print(end_of_game)
-
-
+            #end the round
+            conn.sendall('G' + 'Round over.')
+            conn.recv()
 
 if __name__ == '__main__':
     main()
-
