@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import csv
 import random
+import string
 
 DISPLAY_ROWS = ["$100", "$200", "$300", "$400", "$500"]
 VALUE_MAP = {
@@ -35,6 +36,41 @@ def parse_dollar_value(value_str):
         return int(value_str.replace("$", "").replace(",", "").strip())
     except ValueError:
         return 0
+
+
+def normalize_answer(s):
+    # make answers comparable without being annoying about formatting
+    s = s.strip().lower()
+
+    # remove Jeopardy starter phrases
+    for starter in ["what is ", "who is ", "what are ", "who are "]:
+        if s.startswith(starter):
+            s = s[len(starter):]
+
+    # delete punctuation (commas, periods, quotes, etc.)
+    s = s.translate(str.maketrans("", "", string.punctuation))
+
+    # delete basic filler words
+    words = s.split()
+    filler = {"the", "a", "an"}
+    words = [w for w in words if w not in filler]
+
+    # collapse extra spaces
+    return " ".join(words)
+
+
+def is_correct(user_raw, correct_raw):
+    user = normalize_answer(user_raw)
+    correct = normalize_answer(correct_raw)
+
+    if user == correct:
+        return True
+
+    # "close enough" match (handles first/last name, partial phrasing, etc.)
+    if len(user) >= 4 and (user in correct or correct in user):
+        return True
+
+    return False
 
 
 def load_questions():
@@ -154,12 +190,12 @@ def make_question_popup(root, question_data, button, score_state, score_label):
         if answered["done"]:
             return
 
-        user_answer = entry.get().strip().lower()
-        correct_answer = question_data["Answer"].strip().lower()
-
         points = parse_dollar_value(question_data["Value"])
 
-        if user_answer == correct_answer:
+        user_answer = entry.get()
+        correct_answer = question_data["Answer"]
+
+        if is_correct(user_answer, correct_answer):
             result_label.config(text=f"Correct! (+{points})")
             score_state["score"] = score_state["score"] + points
         else:
@@ -214,6 +250,20 @@ def main():
         )
         header.grid(row=0, column=col, padx=2, pady=2, sticky="nsew")
 
+    # scoreboard row at the bottom
+    score_label = tk.Label(
+        root,
+        text="",
+        font=("Arial", 12, "bold"),
+        bg="lightgray",
+        relief="solid",
+        padx=10,
+        pady=10
+    )
+    score_label.grid(row=len(DISPLAY_ROWS) + 1, column=0, columnspan=NUM_CATEGORIES, sticky="nsew", padx=2, pady=2)
+
+    update_scoreboard(score_state, score_label)
+
     # clue buttons (the actual board)
     for col, category in enumerate(categories):
         for row_index, display_value in enumerate(DISPLAY_ROWS, start=1):
@@ -231,20 +281,6 @@ def main():
             )
 
             btn.grid(row=row_index, column=col, padx=2, pady=2, sticky="nsew")
-
-    # scoreboard row at the bottom
-    score_label = tk.Label(
-        root,
-        text="",
-        font=("Arial", 12, "bold"),
-        bg="lightgray",
-        relief="solid",
-        padx=10,
-        pady=10
-    )
-    score_label.grid(row=len(DISPLAY_ROWS) + 1, column=0, columnspan=NUM_CATEGORIES, sticky="nsew", padx=2, pady=2)
-
-    update_scoreboard(score_state, score_label)
 
     # make the grid stretchy
     for col in range(NUM_CATEGORIES):
