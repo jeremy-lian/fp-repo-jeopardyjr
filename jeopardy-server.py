@@ -1,70 +1,100 @@
-import json
+import csv
+import random
 from socket32 import create_new_socket
 
 HOST = '127.0.0.1'
 PORT = 65432
 
-def load_questions():
-    #retrieve question file
-    with open('questions.json', 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return data['questions']
+
+def load_questions_from_csv():
+    questions = []
+
+    with open("JEOPARDY_CSV.csv", newline='', encoding='utf-8-sig') as file:
+        reader = csv.DictReader(file)
+        reader.fieldnames = [name.strip() for name in reader.fieldnames]
+
+        for row in reader:
+            clean_row = {}
+            for key, value in row.items():
+                clean_row[key.strip()] = value.strip() if value else ""
+
+            question = clean_row.get("Question", "")
+            answer = clean_row.get("Answer", "")
+            category = clean_row.get("Category", "")
+            value = clean_row.get("Value", "")
+
+            if question and answer and category:
+                if not value:
+                    value = "$0"
+
+                questions.append({
+                    "Question": question,
+                    "Answer": answer,
+                    "Category": category,
+                    "Value": value
+                })
+
+    return questions
+
+
+def send_msg(conn, header, message):
+    conn.sendall(header + message)
+
+
+def recv_msg(conn):
+    return conn.recv()
+
 
 def main():
-    #load in the questions
-    questions = load_questions()
+    questions = load_questions_from_csv()
+    print("Loaded", len(questions), "questions")
 
-    # for now just use the first question so this thing actually works
-    q = questions[0]
+    if not questions:
+        print("No questions found in JEOPARDY_CSV.csv")
+        return
+
+    q = random.choice(questions)
 
     with create_new_socket() as s:
-        #server setup
         s.bind(HOST, PORT)
         s.listen()
-        print('Jeopardy server started. Listening on', (HOST, PORT))
+        print("Jeopardy server started. Listening on", (HOST, PORT))
 
-        #wait for a client to connect
         conn, addr = s.accept()
-        print('Connected by', addr)
+        print("Connected by", addr)
 
         with conn:
-            # send the question
-            question_line = f"{q['category']} | ${q['value']} | {q['question']}"
-            conn.sendall('Q' + question_line)
+            category = q["Category"]
+            value = q["Value"]
+            question = q["Question"]
+            answer = q["Answer"]
 
-            #wait for the client to register that it got the question
-            conn.recv()
+            question_line = f"{category} | {value} | {question}"
+            send_msg(conn, 'Q', question_line)
 
-            #allow the client to buzz in
-            conn.sendall('B' + 'Buzz is open! Type b to buzz.')
+            recv_msg(conn)
 
-            # grab whatever they send back
-            buzz_msg = conn.recv()
+            send_msg(conn, 'B', "Buzz is open! Type b to buzz.")
+            buzz_msg = recv_msg(conn)
 
-            #if player buzzes in
             if buzz_msg == 'B':
-                # allow them to answer
-                conn.sendall('A' + 'You buzzed first. Enter your answer:')
-                answer_msg = conn.recv()
+                send_msg(conn, 'A', "You buzzed first. Enter your answer:")
+                answer_msg = recv_msg(conn)
 
-                #make sure the message isn't empty and starts with header A
                 if answer_msg != '' and answer_msg[0] == 'A':
-                    #clean up the player's answer
                     player_answer = answer_msg[1:].strip().lower()
-                    correct_answer = q['answer'].strip().lower()
+                    correct_answer = answer.strip().lower()
 
-                    #temporary answer checker
                     if player_answer == correct_answer:
-                        conn.sendall('R' + 'Correct! You earned 200 points.')
+                        send_msg(conn, 'R', f"Correct! You earned {value} points.")
                     else:
-                        conn.sendall('R' + f"Incorrect. Correct answer: {q['answer']}")
+                        send_msg(conn, 'R', f"Incorrect. Correct answer: {answer}")
 
-                    # wait for the client to acknowledge
-                    conn.recv()
+                    recv_msg(conn)
 
-            #end the round
-            conn.sendall('G' + 'Round over.')
-            conn.recv()
+            send_msg(conn, 'G', "Round over.")
+            recv_msg(conn)
+
 
 if __name__ == '__main__':
     main()

@@ -1,0 +1,205 @@
+import tkinter as tk
+from tkinter import messagebox
+import csv
+import random
+
+DISPLAY_ROWS = ["$100", "$200", "$300", "$400", "$500"]
+VALUE_MAP = {
+    "$100": "$200",
+    "$200": "$400",
+    "$300": "$600",
+    "$400": "$800",
+    "$500": "$1000"
+}
+NUM_CATEGORIES = 5
+
+
+def normalize_csv_value(value):
+    value = value.strip()
+    if not value:
+        return None
+
+    value = value.replace(",", "").replace(" ", "")
+
+    if not value.startswith("$"):
+        return None
+
+    return value
+
+
+def load_questions():
+    questions = []
+
+    with open("JEOPARDY_CSV.csv", newline="", encoding="utf-8-sig") as file:
+        reader = csv.DictReader(file)
+
+        # Clean up header names like " Question" -> "Question"
+        reader.fieldnames = [name.strip() for name in reader.fieldnames]
+
+        for row in reader:
+            clean_row = {}
+            for key, value in row.items():
+                clean_row[key.strip()] = value.strip() if value else ""
+
+            category = clean_row.get("Category", "")
+            question = clean_row.get("Question", "")
+            answer = clean_row.get("Answer", "")
+            value = normalize_csv_value(clean_row.get("Value", ""))
+
+            if category and question and answer and value:
+                questions.append({
+                    "Category": category,
+                    "Question": question,
+                    "Answer": answer,
+                    "Value": value
+                })
+
+    return questions
+
+
+def build_board_data(all_questions):
+    grouped = {}
+
+    for q in all_questions:
+        category = q["Category"]
+        value = q["Value"]
+
+        if category not in grouped:
+            grouped[category] = {}
+
+        if value not in grouped[category]:
+            grouped[category][value] = []
+
+        grouped[category][value].append(q)
+
+    valid_categories = []
+    needed_values = list(VALUE_MAP.values())
+
+    for category, value_map in grouped.items():
+        if all(actual_value in value_map and len(value_map[actual_value]) > 0
+               for actual_value in needed_values):
+            valid_categories.append(category)
+
+    if len(valid_categories) < NUM_CATEGORIES:
+        raise ValueError("Not enough categories with matching question values.")
+
+    chosen_categories = random.sample(valid_categories, NUM_CATEGORIES)
+
+    board = {}
+    for category in chosen_categories:
+        board[category] = {}
+        for display_value in DISPLAY_ROWS:
+            actual_value = VALUE_MAP[display_value]
+            board[category][display_value] = random.choice(grouped[category][actual_value])
+
+    return chosen_categories, board
+
+
+def make_question_popup(parent, question_data, button):
+    popup = tk.Toplevel(parent)
+    popup.title(f'{question_data["Category"]} - {question_data["Value"]}')
+    popup.geometry("550x320")
+
+    tk.Label(
+        popup,
+        text=question_data["Category"],
+        font=("Arial", 14, "bold"),
+        wraplength=500
+    ).pack(pady=10)
+
+    tk.Label(
+        popup,
+        text=question_data["Question"],
+        font=("Arial", 12),
+        wraplength=500,
+        justify="center"
+    ).pack(pady=10)
+
+    entry = tk.Entry(popup, width=40)
+    entry.pack(pady=10)
+
+    result_label = tk.Label(
+        popup,
+        text="",
+        wraplength=500,
+        font=("Arial", 11)
+    )
+    result_label.pack(pady=10)
+
+    answered = {"done": False}
+
+    def check_answer():
+        if answered["done"]:
+            return
+
+        user_answer = entry.get().strip().lower()
+        correct_answer = question_data["Answer"].strip().lower()
+
+        if user_answer == correct_answer:
+            result_label.config(text="Correct!")
+        else:
+            result_label.config(
+                text=f'Incorrect. Correct answer: {question_data["Answer"]}'
+            )
+
+        button.config(state="disabled", text="")
+        answered["done"] = True
+
+    tk.Button(popup, text="Submit", command=check_answer).pack(pady=10)
+
+
+def main():
+    all_questions = load_questions()
+
+    try:
+        categories, board = build_board_data(all_questions)
+    except ValueError as e:
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("Error", str(e))
+        return
+
+    root = tk.Tk()
+    root.title("Jeopardy Board")
+
+    for col, category in enumerate(categories):
+        header = tk.Label(
+            root,
+            text=category,
+            font=("Arial", 12, "bold"),
+            wraplength=140,
+            width=15,
+            height=3,
+            relief="solid",
+            bg="lightblue"
+        )
+        header.grid(row=0, column=col, padx=2, pady=2, sticky="nsew")
+
+    for col, category in enumerate(categories):
+        for row_index, display_value in enumerate(DISPLAY_ROWS, start=1):
+            qdata = board[category][display_value]
+
+            btn = tk.Button(
+                root,
+                text=display_value,
+                width=15,
+                height=3
+            )
+
+            btn.config(
+                command=lambda q=qdata, b=btn: make_question_popup(root, q, b)
+            )
+
+            btn.grid(row=row_index, column=col, padx=2, pady=2, sticky="nsew")
+
+    for col in range(NUM_CATEGORIES):
+        root.grid_columnconfigure(col, weight=1)
+
+    for row in range(len(DISPLAY_ROWS) + 1):
+        root.grid_rowconfigure(row, weight=1)
+
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
