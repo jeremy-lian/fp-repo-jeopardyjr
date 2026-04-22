@@ -12,9 +12,11 @@ VALUE_MAP = {
     "$500": "$1000"
 }
 NUM_CATEGORIES = 5
+TOTAL_QUESTIONS = NUM_CATEGORIES * len(DISPLAY_ROWS)
 
 
 def normalize_csv_value(value):
+    # clean up the value column so it's always like "$800" or whatever
     value = value.strip()
     if not value:
         return None
@@ -27,13 +29,21 @@ def normalize_csv_value(value):
     return value
 
 
+def parse_dollar_value(value_str):
+    # turn "$800" into 800 so we can do math and pretend we're smart
+    try:
+        return int(value_str.replace("$", "").replace(",", "").strip())
+    except ValueError:
+        return 0
+
+
 def load_questions():
     questions = []
 
     with open("JEOPARDY_CSV.csv", newline="", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file)
 
-        # Clean up header names like " Question" -> "Question"
+        # Fix headers like " Question" -> "Question"
         reader.fieldnames = [name.strip() for name in reader.fieldnames]
 
         for row in reader:
@@ -95,8 +105,20 @@ def build_board_data(all_questions):
     return chosen_categories, board
 
 
-def make_question_popup(parent, question_data, button):
-    popup = tk.Toplevel(parent)
+def update_scoreboard(score_state, score_label):
+    # update the scoreboard text so the user can watch their score go up or crash
+    remaining = TOTAL_QUESTIONS - score_state["answered"]
+    score_label.config(text=f"Score: {score_state['score']}     Remaining: {remaining}/{TOTAL_QUESTIONS}")
+
+
+def end_game(root, score_state):
+    # end the game once all 25 questions are done
+    messagebox.showinfo("Game Over", f"All questions are done.\nFinal score: {score_state['score']}")
+    root.destroy()
+
+
+def make_question_popup(root, question_data, button, score_state, score_label):
+    popup = tk.Toplevel(root)
     popup.title(f'{question_data["Category"]} - {question_data["Value"]}')
     popup.geometry("550x320")
 
@@ -135,15 +157,28 @@ def make_question_popup(parent, question_data, button):
         user_answer = entry.get().strip().lower()
         correct_answer = question_data["Answer"].strip().lower()
 
-        if user_answer == correct_answer:
-            result_label.config(text="Correct!")
-        else:
-            result_label.config(
-                text=f'Incorrect. Correct answer: {question_data["Answer"]}'
-            )
+        points = parse_dollar_value(question_data["Value"])
 
+        if user_answer == correct_answer:
+            result_label.config(text=f"Correct! (+{points})")
+            score_state["score"] = score_state["score"] + points
+        else:
+            result_label.config(text=f'Incorrect. Correct answer: {question_data["Answer"]} (-{points})')
+            score_state["score"] = score_state["score"] - points
+
+        # mark this square as used
         button.config(state="disabled", text="")
         answered["done"] = True
+
+        # track progress + update scoreboard
+        score_state["answered"] = score_state["answered"] + 1
+        update_scoreboard(score_state, score_label)
+
+        # if that was the last question, gg
+        if score_state["answered"] >= TOTAL_QUESTIONS:
+            popup.destroy()
+            end_game(root, score_state)
+            return
 
     tk.Button(popup, text="Submit", command=check_answer).pack(pady=10)
 
@@ -162,6 +197,10 @@ def main():
     root = tk.Tk()
     root.title("Jeopardy Board")
 
+    # state stuff for scoring + tracking how many questions are done
+    score_state = {"score": 0, "answered": 0}
+
+    # category headers
     for col, category in enumerate(categories):
         header = tk.Label(
             root,
@@ -175,6 +214,7 @@ def main():
         )
         header.grid(row=0, column=col, padx=2, pady=2, sticky="nsew")
 
+    # clue buttons (the actual board)
     for col, category in enumerate(categories):
         for row_index, display_value in enumerate(DISPLAY_ROWS, start=1):
             qdata = board[category][display_value]
@@ -187,15 +227,30 @@ def main():
             )
 
             btn.config(
-                command=lambda q=qdata, b=btn: make_question_popup(root, q, b)
+                command=lambda q=qdata, b=btn: make_question_popup(root, q, b, score_state, score_label)
             )
 
             btn.grid(row=row_index, column=col, padx=2, pady=2, sticky="nsew")
 
+    # scoreboard row at the bottom
+    score_label = tk.Label(
+        root,
+        text="",
+        font=("Arial", 12, "bold"),
+        bg="lightgray",
+        relief="solid",
+        padx=10,
+        pady=10
+    )
+    score_label.grid(row=len(DISPLAY_ROWS) + 1, column=0, columnspan=NUM_CATEGORIES, sticky="nsew", padx=2, pady=2)
+
+    update_scoreboard(score_state, score_label)
+
+    # make the grid stretchy
     for col in range(NUM_CATEGORIES):
         root.grid_columnconfigure(col, weight=1)
 
-    for row in range(len(DISPLAY_ROWS) + 1):
+    for row in range(len(DISPLAY_ROWS) + 2):  # +1 for headers, +1 for scoreboard
         root.grid_rowconfigure(row, weight=1)
 
     root.mainloop()
