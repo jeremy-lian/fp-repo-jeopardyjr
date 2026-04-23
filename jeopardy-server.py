@@ -2,6 +2,7 @@ import csv
 import random
 from socket32 import create_new_socket
 from models import Question
+from models import Game
 
 HOST = '127.0.0.1'
 PORT = 65432
@@ -51,7 +52,8 @@ def main():
         print("No questions found in JEOPARDY_CSV.csv")
         return
 
-    q = random.choice(questions)
+    game = Game(questions)
+    q = game.get_random_question()
 
     with create_new_socket() as s:
         s.bind(HOST, PORT)
@@ -62,10 +64,10 @@ def main():
         print("Connected by", addr)
 
         with conn:
-            category = q["Category"]
-            value = q["Value"]
-            question = q["Question"]
-            answer = q["Answer"]
+            category = q.category
+            value = q.value
+            question = q.text
+            answer = q.answer
 
             question_line = f"{category} | {value} | {question}"
             send_msg(conn, 'Q', question_line)
