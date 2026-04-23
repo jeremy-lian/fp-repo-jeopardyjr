@@ -3,6 +3,7 @@ import random
 from socket32 import create_new_socket
 from models import Question
 from models import Game
+from models import Player
 
 HOST = '127.0.0.1'
 PORT = 65432
@@ -82,14 +83,12 @@ def main():
                 answer_msg = recv_msg(conn)
 
                 if answer_msg != '' and answer_msg[0] == 'A':
-                    player_answer = answer_msg[1:].strip().lower()
-                    correct_answer = answer.strip().lower()
+                    player_answer = answer_msg[1:].strip()
 
-                    if player_answer == correct_answer:
+                    if q.check_answer(player_answer):
                         send_msg(conn, 'R', f"Correct! You earned {value} points.")
                     else:
                         send_msg(conn, 'R', f"Incorrect. Correct answer: {answer}")
-
                     recv_msg(conn)
 
             send_msg(conn, 'G', "Round over.")
