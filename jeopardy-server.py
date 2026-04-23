@@ -1,6 +1,7 @@
 import csv
 import random
 from socket32 import create_new_socket
+from models import Question
 
 HOST = '127.0.0.1'
 PORT = 65432
@@ -27,12 +28,9 @@ def load_questions_from_csv():
                 if not value:
                     value = "$0"
 
-                questions.append({
-                    "Question": question,
-                    "Answer": answer,
-                    "Category": category,
-                    "Value": value
-                })
+                questions.append(
+                    Question(question, answer, category, value)
+                )
 
     return questions
 
