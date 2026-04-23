@@ -1,5 +1,4 @@
 import csv
-import random
 from socket32 import create_new_socket
 from models import Question
 from models import Game
@@ -56,6 +55,8 @@ def main():
     game = Game(questions)
     q = game.get_random_question()
 
+    player = Player("Player 1")
+
     with create_new_socket() as s:
         s.bind(HOST, PORT)
         s.listen()
@@ -84,11 +85,15 @@ def main():
 
                 if answer_msg != '' and answer_msg[0] == 'A':
                     player_answer = answer_msg[1:].strip()
+                    points = int(value.replace("$", "").replace(",", ""))
 
                     if q.check_answer(player_answer):
-                        send_msg(conn, 'R', f"Correct! You earned {value} points.")
+                        player.add_score(points)
+                        send_msg(conn, 'R', f"Correct! You earned {value} points. Total score: {player.score}")
                     else:
-                        send_msg(conn, 'R', f"Incorrect. Correct answer: {answer}")
+                        player.add_score(-points)
+                        send_msg(conn, 'R', f"Incorrect. Correct answer: {answer}. Total score: {player.score}")
+                        
                     recv_msg(conn)
 
             send_msg(conn, 'G', "Round over.")
