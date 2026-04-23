@@ -1,3 +1,5 @@
+import random
+
 class Question:
     def __init__(self, text, answer, category, value):
         self.text = text
@@ -6,13 +8,11 @@ class Question:
         self.value = value
 
     def check_answer(self, user_input):
-        from jeopardy_gui import normalize_answer  # or move this later
-        return normalize_answer(user_input) == normalize_answer(self.answer)
+        return user_input.strip().lower() == self.answer.strip().lower()
 
     def __str__(self):
         return f"[{self.category} - {self.value}] {self.text}"
 
-import random
 
 class Game:
     def __init__(self, questions):
@@ -23,7 +23,8 @@ class Game:
         self.current_question = random.choice(self.questions)
         return self.current_question
 
-  class Player:
+
+class Player:
     def __init__(self, name):
         self.name = name
         self.score = 0
