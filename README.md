@@ -41,7 +41,27 @@ Each player will run the game on their own separate clients. It should accomplis
 ### 3. Question Database
 The game must have a very large set of questions and answers organized into different categories. The questions within these categories should have different point values based on perceived difficulty.
 
-# How to Run (Status update)
-Simply just run the Offline GUI to play the working offline single-player Jeopardy game
+# FP Status Update
+
+### How to run
+Simply run the Offline GUI to play the working offline single-player Jeopardy game
 If you want to run the networked prototype, first run the server, and then run the client. This is only a one-round demo, not the full 25 question loop yet.
+
+### Testing (specifically what we verified)
+- Verified score increases and decreases based on the question value
+- Verified that squares cannot be selected more than once
+- Verified answer checking works with capitalization/punctuation differences (as well as the close enough feature that is definitely too lenient)
+- Verified game will end after 25 questions and shows the final score
+  
+### Data Sources / References
+- Jeopardy question dataset (Kaggle): https://www.kaggle.com/datasets/tunguz/200000-jeopardy-questions
+- Tkinter grid reference: https://realpython.com/python-gui-tkinter/
+
+### AI Usage
+We used generative AI to accomplish the following:
+- brainstorming score tracking and end-of-game logic for the GUI
+- implementing the less strict answer matching
+- planning the client-server message protocols (inspired by the Roshambo from Pset 3)
+
+All the AI-inspired code was reviewed by us before and we tested them using the tests mentioned.
 
