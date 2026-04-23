@@ -41,5 +41,7 @@ Each player will run the game on their own separate clients. It should accomplis
 ### 3. Question Database
 The game must have a very large set of questions and answers organized into different categories. The questions within these categories should have different point values based on perceived difficulty.
 
-
+# How to Run (Status update)
+Simply just run the Offline GUI to play the working offline single-player Jeopardy game
+If you want to run the networked prototype, first run the server, and then run the client. This is only a one-round demo, not the full 25 question loop yet.
 
