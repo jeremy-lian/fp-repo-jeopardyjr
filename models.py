@@ -1,7 +1,10 @@
 import random
 import string
 
+# dollar values shown on th board
 DISPLAY_ROWS = ["$100", "$200", "$300", "$400", "$500"]
+
+# The CSV uses igher dollar values so this helps us find the actual value
 VALUE_MAP = {
     "$100": "$200",
     "$200": "$400",
@@ -9,10 +12,14 @@ VALUE_MAP = {
     "$400": "$800",
     "$500": "$1000"
 }
+
 NUM_CATEGORIES = 5
 
 
 def normalize_answer(s):
+    """
+    Clean an answer so user input and correct answers can be compared more fairly.
+    """
     s = s.strip().lower()
 
     for starter in ["what is ", "who is ", "what are ", "who are "]:
@@ -29,6 +36,9 @@ def normalize_answer(s):
 
 
 def normalize_csv_value(value):
+    """
+    Clean the dollar value from the CSV and make sure it is usable.
+    """
     value = value.strip()
     if not value:
         return None
@@ -42,6 +52,9 @@ def normalize_csv_value(value):
 
 
 def parse_dollar_value(value_str):
+    """
+    Convert a dollar string like "$500" into the integer 500.
+    """
     try:
         return int(value_str.replace("$", "").replace(",", "").strip())
     except ValueError:
@@ -57,6 +70,9 @@ class Question:
         self.used = False
 
     def check_answer(self, user_input):
+        """
+        Check wheter the player's answer matches the correct answer.
+        """
         user = normalize_answer(user_input)
         correct = normalize_answer(self.answer)
 
@@ -69,9 +85,15 @@ class Question:
         return False
 
     def get_points(self):
+        """
+        Return this the value as an integer.
+        """
         return parse_dollar_value(self.value)
 
     def mark_used(self):
+        """
+        mark question as chosen
+        """
         self.used = True
 
     def __str__(self):
@@ -79,6 +101,9 @@ class Question:
 
 
 class Player:
+    """
+    Represent a player in the game
+    """
     def __init__(self, name):
         self.name = name
         self.score = 0
@@ -88,13 +113,21 @@ class Player:
 
 
 class Board:
+    """
+    Represents the jeoparsy board
+    """
     def __init__(self, questions):
         self.questions = questions
         self.categories, self.board = self.build_board_data()
 
     def build_board_data(self):
+        """
+        Group questions by category and value, then choose random categories 
+        that have wnough questions to make a full board.
+        """
         grouped = {}
 
+        # organize questions
         for q in self.questions:
             category = q.category
             value = q.value
@@ -110,6 +143,7 @@ class Board:
         valid_categories = []
         needed_values = list(VALUE_MAP.values())
 
+        # only valid if it has questions for every neede value
         for category, value_map in grouped.items():
             if all(actual_value in value_map and len(value_map[actual_value]) > 0
                    for actual_value in needed_values):
@@ -118,9 +152,12 @@ class Board:
         if len(valid_categories) < NUM_CATEGORIES:
             raise ValueError("Not enough categories with matching question values.")
 
+        # Pick 5 random categories for this game.
         chosen_categories = random.sample(valid_categories, NUM_CATEGORIES)
 
         board = {}
+
+        # For each chosen category, choose one random question for each row
         for category in chosen_categories:
             board[category] = {}
             for display_value in DISPLAY_ROWS:
