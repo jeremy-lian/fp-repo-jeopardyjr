@@ -27,7 +27,167 @@ def max_wager_for(score):
     if score > 500:
         return score
     return 500
+def max_final_wager(score):
+    # final jeopardy-- you can wager from - up to your current score
+    #if score is negative, max wager is automatically 0
+    if score > 0:
+        return score
+    return 0
 
+def pick_final_question(all_questions, board_questions):
+    # pick something not already on the board
+    pool = []
+    for q in all_questions:
+        if q not in board_questions:
+            pool.append(q)
+    if len(pool) > 0:
+        return random.choice(pool)
+    return random.choice(all_questions)
+
+def ai_final_wager(ai_score, player_score):
+    # clamp negatives
+    if ai_score < 0:
+        ai_score = 0
+    if player_score < 0:
+        player_score = 0
+
+    # If AI has more than double the player's score, bet 0 to lock the win
+    if ai_score > 2 * player_score:
+        return 0
+
+    # If AI has exactly double, bet 1 to win ties if both are correct
+    if ai_score == 2 * player_score:
+        if ai_score >= 1:
+            return 1
+        return 0
+
+    # If AI can't win no matter what (even doubling doesn't reach player),
+    # then full send bet everything
+    if 2 * ai_score <= player_score:
+        return ai_score
+
+    # If the spread is close-ish: bet 40% to 100% randomly
+    low = int(ai_score * 0.40)
+    high = ai_score
+
+    if low < 0:
+        low = 0
+    if low > high:
+        low = high
+
+    return random.randint(low, high)
+
+def run_final_jeopardy(root, final_q, player, ai_player, game_state, score_label):
+    # final jeopardy: category -> wagers -> question -> score -> game over
+
+    # 1) show category
+    messagebox.showinfo("Final Jeopardy!", "Category:\n" + str(final_q.category))
+
+    # 2) wagers
+    max_player = max_final_wager(player.score)
+    player_wager = 0
+
+    if max_player > 0:
+        w = simpledialog.askinteger(
+            "Final Jeopardy Wager",
+            f"Enter wager (0 - {max_player}):",
+            minvalue=0,
+            maxvalue=max_player,
+            parent=root
+        )
+        if w is not None:
+            player_wager = w
+
+    # AI wager logic (your custom rules)
+    ai_wager = ai_final_wager(ai_player.score, player.score)
+
+    # 3) popup for the question
+    popup = tk.Toplevel(root)
+    popup.title("Final Jeopardy")
+    popup.geometry("600x360")
+
+    tk.Label(popup, text="FINAL JEOPARDY", font=("Arial", 16, "bold")).pack(pady=6)
+    tk.Label(popup, text=f"Category: {final_q.category}", font=("Arial", 12, "bold")).pack(pady=4)
+
+    tk.Label(
+        popup,
+        text=final_q.text,
+        wraplength=540,
+        justify="center",
+        font=("Arial", 12)
+    ).pack(pady=10)
+
+    tk.Label(popup, text=f"Your wager: {player_wager}", font=("Arial", 11)).pack()
+    tk.Label(popup, text=f"AI wager: {ai_wager}", font=("Arial", 11)).pack()
+
+    entry = tk.Entry(popup, width=50)
+    entry.pack(pady=10)
+
+    already_scored = {"done": False}
+
+    def submit_final():
+        if already_scored["done"]:
+            return
+        already_scored["done"] = True
+
+        user_ans = entry.get().strip()
+
+        # player correctness uses your Question.check_answer
+        player_correct = final_q.check_answer(user_ans)
+
+        # ai correctness uses difficulty
+        ai_prob = game_state.get("ai_accuracy", 0.5)
+        if ai_prob < 0:
+            ai_prob = 0
+        if ai_prob > 1:
+            ai_prob = 1
+        ai_correct = (random.random() < ai_prob)
+
+        # score player
+        if player_correct:
+            player.add_score(player_wager)
+            player_line = f"Player correct! +{player_wager}"
+        else:
+            player.add_score(-player_wager)
+            player_line = f"Player wrong. -{player_wager} (Correct: {final_q.answer})"
+
+        # score AI
+        if ai_correct:
+            ai_player.add_score(ai_wager)
+            ai_line = f"AI correct! +{ai_wager}"
+        else:
+            ai_player.add_score(-ai_wager)
+            ai_line = f"AI wrong. -{ai_wager}"
+
+        # update scoreboard
+        update_scoreboard(player, ai_player, game_state["answered"], score_label)
+
+        # show results
+        if player.score > ai_player.score:
+            winner = "You win!"
+        elif ai_player.score > player.score:
+            winner = "AI wins!"
+        else:
+            winner = "Tie game!"
+
+        msg = (
+            player_line + "\n" +
+            ai_line + "\n\n" +
+            f"Final Scores:\nPlayer: {player.score}\nAI: {ai_player.score}\n\n" +
+            winner
+        )
+
+        messagebox.showinfo("Final Jeopardy Results", msg)
+
+        try:
+            popup.destroy()
+        except Exception:
+            pass
+
+        # now end the whole game (this destroys root)
+        end_game(root, player, ai_player)
+
+    tk.Button(popup, text="Submit Final Answer", command=submit_final).pack(pady=8)
 
 def load_questions():
     """
@@ -95,10 +255,17 @@ def end_game(root, player, ai_player):
 
 
 # Checking if the game is over, or if the loop should continue
-def check_game_over(root, player, ai_player, game_state):
+def check_game_over(root, player, ai_player, game_state, score_label):
     if game_state["answered"] >= TOTAL_QUESTIONS:
+        # if final jeopardy hasn't happened yet, do it
+        if not game_state.get("final_done", False):
+            game_state["final_done"] = True
+            run_final_jeopardy(root, game_state["final_question"], player, ai_player, game_state, score_label)
+            return True
+        # otherwise just end normally
         end_game(root, player, ai_player)
         return True
+
     return False
 
 
@@ -112,7 +279,7 @@ def ai_turn(root, ai_player, player, game_state, score_label):
     ]
 
     if not available:
-        check_game_over(root, player, ai_player, game_state)
+        check_game_over(root, player, ai_player, game_state, score_label)
         return
 
     clue = random.choice(available)
@@ -146,7 +313,7 @@ def ai_turn(root, ai_player, player, game_state, score_label):
 
     messagebox.showinfo("AI Turn", result)
 
-    check_game_over(root, player, ai_player, game_state)
+    check_game_over(root, player, ai_player, game_state, score_label)
 
 
 
@@ -164,7 +331,7 @@ def make_question_popup(root, question_obj, button, display_value, player, ai_pl
     #if the clue is a daily double, then ask for wager before answering
     if getattr(question_obj, "daily_double", False):
         max_wager = max_wager_for(player.score)
-        wager_amount = simple.dialog.askinteger(
+        wager_amount = simpledialog.askinteger(
             "DAILY DOUBLE!",
             f"Daily Double! Enter your wager (1 - {max_wager}):",
             minvalue = 1,
@@ -215,7 +382,7 @@ def make_question_popup(root, question_obj, button, display_value, player, ai_pl
         if game_state["done_questions"].get(question_obj, False):
             return
 
-        if wager_amount = not None:
+        if wager_amount is not None:
             points = wager_amount
         else:
             points = display_value_to_points(display_value)
@@ -238,7 +405,7 @@ def make_question_popup(root, question_obj, button, display_value, player, ai_pl
         update_scoreboard(player, ai_player, game_state["answered"], score_label)
 
         # End the game when evey board question has been answered
-        if check_game_over(root, player, ai_player, game_state):
+        if check_game_over(root, player, ai_player, game_state, score_label):
             popup.destroy()
             return
 
@@ -289,6 +456,14 @@ def main(difficulty):
         board_obj = Board(all_questions)
         categories = board_obj.categories
         board = board_obj.board
+        # build a list of the 25 questions on the board so we can avoid reusing them for Final Jeopardy
+        board_questions = []
+        for cat in categories:
+            for dv in DISPLAY_ROWS:
+                board_questions.append(board[cat][dv])
+
+        # store final jeopardy question + flag in game_state
+        final_q = pick_final_question(all_questions, board_questions)
     except ValueError as e:
         # Show an error if the CSV doesnt have enough usable questions
         root = tk.Tk()
@@ -305,7 +480,9 @@ def main(difficulty):
         "answered": 0,
         "done_questions": {},
         "clues": [],
-        "ai_accuracy": DIFFICULTIES[difficulty]
+        "ai_accuracy": DIFFICULTIES[difficulty],
+        "final_question": final_q,
+        "final_done": False
     }
 
     # category headers across the top of the board
