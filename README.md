@@ -68,3 +68,7 @@ We used generative AI to accomplish the following:
 
 All the AI-inspired code was reviewed by us before and we tested them using the tests mentioned.
 
+# Pivot
+
+### Game Structure
+We originally intended to create a multiplayer client-server buzzer game inspired by Roshambo mixed with Jeopardy, but after feedback and difficulty realizations, we pivoted to an offline GUI version against an AI.
