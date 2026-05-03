@@ -68,7 +68,7 @@ class Question:
         self.category = category
         self.value = value
         self.used = False
-        self.daily_double = True
+        self.daily_double = False
 
     def check_answer(self, user_input):
         """
@@ -169,8 +169,12 @@ class Board:
                 actual_value = VALUE_MAP[display_value]
                 board[category][display_value] = random.choice(grouped[category][actual_value])
 
+        # Returns both pieces of board data so __init__ can score them
+        return chosen_categories, board
+
+
     def place_daily_doubles(self, count = 1):
-        #grab all 25 quesitons currently on the board
+        # grab all 25 quesitons currently on the board
         all_questions = []
         for category in self.categories:
             for display_value in DISPLAY_ROWS:
@@ -178,7 +182,7 @@ class Board:
 
         #pick random unique questions to become Daily Doubles
         picks = random.sample(all_questions, count)
-        for q in picks
-            q.set_daily_double()
 
-        return chosen_categories, board
+        # Mark question after its been picked
+        for q in picks:
+            q.set_daily_double()
