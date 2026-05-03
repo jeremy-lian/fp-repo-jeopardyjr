@@ -17,7 +17,7 @@ The main goal of this project is to create a working multiplayer game system wit
 
 # Core Files
 
-### 1. Server
+### 1. Server (REMOVED)
 The server is what the users will connect to through their clients. It should accomplish the following:
 - accept client connections
 - store player names and connections
@@ -29,7 +29,7 @@ The server is what the users will connect to through their clients. It should ac
 - update scores and display to users
 - determine if the game should be over
 
-### 2. Client
+### 2. Client (REMOVED)
 Each player will run the game on their own separate clients. It should accomplish the following:
 - connect to the server
 - send the player's name
@@ -38,7 +38,10 @@ Each player will run the game on their own separate clients. It should accomplis
 - allow the player to submit an answer (or just say it verbally without code being used)
 - display score updates and results
 
-### 3. Question Database
+### 3. GUI
+The jeopardy-gui.py file runs the working offline Jeopardy game. It builds a 5x5 clickable Jeopardy board, supports Player vs AI mode (dificulty based accuracy), tracks scores, disables squares that have been used, and ends automatically once all 25 questions have been used.
+
+### 4. Question Database
 The game must have a very large set of questions and answers organized into different categories. The questions within these categories should have different point values based on perceived difficulty.
 
 # FP Status Update
