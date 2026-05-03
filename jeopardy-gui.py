@@ -479,7 +479,7 @@ def show_start_screen():
     tk.Button(
         start,
         text = "Start Game",
-        font = ("Arial", 14, "Bold"),
+        font = ("Arial", 14, "bold"),
         width = 20,
         height = 2,
         command = go_to_menu
