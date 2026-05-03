@@ -420,6 +420,83 @@ def make_question_popup(root, question_obj, button, display_value, player, ai_pl
 Want to be able to select the difficulty level
 '''
 
+def show_start_screen():
+    """
+    Show the first screen the player sees when the game opens. 
+    The screen explains the rulesbefore sending the [layer to the dificulty menu.
+    """
+
+    # create the starting window
+    start = tk.TK()
+    start.titile("Jeopardy Jr.")
+    start.geometry("650x500")
+
+    # Main title at the top
+    tk.Label(
+        start,
+        text = "Jeopardy Jr.",
+        font = ("Arial", 28, "bold")
+    ).pack(pady=25)
+
+    # Short welcome message
+    tk.Label(
+        start,
+        text = "Welcome to Jeopardy Jr.!"
+        font = ("Arial", 15, "bold")
+    ).pack(pady=5)
+
+    # Instructions shown befroe the game starts
+    instructions = (
+        "How to Play:\n\n"
+        "1. Choose an AI difficuulty level.\n"
+        "2. Pick a category and dollar amount from the board.\n"
+        "3. Type you answer into the answer box.\n"
+        "4. If your answer is correct you gain points.\n"
+        "5. If your answer is wrong. you lose points.\n"
+        "6. After your turn, an AI will choose a question.\n"
+        "7. One question ay be a Daily Double, where you choose your wager.\n"
+        "8. After all board questions are finished, Final Jeopardy begins.\n\n"
+        "Try to finish with a higher score than the AI!"
+    )
+
+    # Label that displays the instructions
+    tk.Label(
+        start,
+        text = instructions,
+        font = ("Arial", 12),
+        justify = "left",
+        wraplenght = 550
+    ).pack(pady=5)
+
+    def go_to_menu():
+        """
+        Close the start screen and open the difficulty menu.
+        """
+        start.destroy()
+        show_menu()
+
+    # button that start the game
+    tk.Button(
+        start,
+        text = "Start Game",
+        font = ("Arial", 14, "Bold"),
+        width = 20,
+        lenght = 2,
+        command = go_to_menu
+    ).pack(pady=10)
+
+    # Quit button
+    tk.Button(
+        start,
+        text = "Quit",
+        font = ("Arial", 11),
+        width = 12,
+        command = start.destroy
+    ).pack(pady=5)
+
+    start.mainloop()
+
+
 def show_menu():
     menu = tk.Tk()
     menu.title("Select Difficulty")
@@ -512,7 +589,7 @@ def main(difficulty):
 
     def restart_game():
         root.destroy()
-        show_menu()
+        show_start_screen()
 
     restart_button = tk.Button(
         root,
@@ -579,4 +656,4 @@ def main(difficulty):
 
 
 if __name__ == "__main__":
-    show_menu()
+    show_start_screen()
