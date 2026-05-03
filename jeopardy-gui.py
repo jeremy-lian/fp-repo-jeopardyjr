@@ -427,8 +427,8 @@ def show_start_screen():
     """
 
     # create the starting window
-    start = tk.TK()
-    start.titile("Jeopardy Jr.")
+    start = tk.Tk()
+    start.title("Jeopardy Jr.")
     start.geometry("650x500")
 
     # Main title at the top
@@ -441,7 +441,7 @@ def show_start_screen():
     # Short welcome message
     tk.Label(
         start,
-        text = "Welcome to Jeopardy Jr.!"
+        text = "Welcome to Jeopardy Jr.!",
         font = ("Arial", 15, "bold")
     ).pack(pady=5)
 
@@ -465,7 +465,7 @@ def show_start_screen():
         text = instructions,
         font = ("Arial", 12),
         justify = "left",
-        wraplenght = 550
+        wraplength = 550
     ).pack(pady=5)
 
     def go_to_menu():
@@ -481,7 +481,7 @@ def show_start_screen():
         text = "Start Game",
         font = ("Arial", 14, "Bold"),
         width = 20,
-        lenght = 2,
+        height = 2,
         command = go_to_menu
     ).pack(pady=10)
 
