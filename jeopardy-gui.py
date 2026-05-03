@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 import csv
 import random
 from models import Question, Player, Board, normalize_csv_value
@@ -22,8 +22,11 @@ DIFFICULTIES = {
 # Fixes the issue of giving 100 points instead of $100
 def display_value_to_points(display_value):
     return int(display_value.replace("$", ""))
-
-
+def max_wager_for(score):
+    #you can always wager at least the top point value (500)
+    if score > 500:
+        return score
+    return 500
 
 
 def load_questions():
@@ -157,6 +160,23 @@ def make_question_popup(root, question_obj, button, display_value, player, ai_pl
     popup.title(f'{question_obj.category} - {question_obj.value}')
     popup.geometry("550x320")
 
+    wager_amount = None
+    #if the clue is a daily double, then ask for wager before answering
+    if getattr(question_obj, "daily_double", False):
+        max_wager = max_wager_for(player.score)
+        wager_amount = simple.dialog.askinteger(
+            "DAILY DOUBLE!",
+            f"Daily Double! Enter your wager (1 - {max_wager}):",
+            minvalue = 1,
+            maxvalue = max_wager,
+            parent = popup
+        )
+    
+        #if they cancel, close the popup and don't use the clue
+        if wager_amount is None:
+            popup.destroy()
+            return
+            
     # show the category name
     tk.Label(
         popup,
@@ -195,7 +215,10 @@ def make_question_popup(root, question_obj, button, display_value, player, ai_pl
         if game_state["done_questions"].get(question_obj, False):
             return
 
-        points = display_value_to_points(display_value)
+        if wager_amount = not None:
+            points = wager_amount
+        else:
+            points = display_value_to_points(display_value)
         user_answer = entry.get()
 
         # Add points for a correct answer and subtract points for a wrong answer
