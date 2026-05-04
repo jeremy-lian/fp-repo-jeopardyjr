@@ -365,7 +365,7 @@ def make_question_popup(root, question_obj, button, display_value, player, ai_pl
     entry = tk.Entry(popup, width=40)
     entry.pack(pady=10)
 
-    # label used to show wheter the answer was correct or incorrect
+    # label used to show whether the answer was correct or incorrect
     result_label = tk.Label(
         popup,
         text="",
@@ -396,7 +396,7 @@ def make_question_popup(root, question_obj, button, display_value, player, ai_pl
             result_label.config(text=f"Incorrect. Correct answer: {question_obj.answer} (-{points})")
             player.add_score(-points)
 
-        # Mark  the question as used in both the ibject and the game state
+        # Mark  the question as used in both the object and the game state
         question_obj.mark_used()
         button.config(state="disabled", text="")
         game_state["done_questions"][question_obj] = True
@@ -630,7 +630,6 @@ def main(difficulty):
                 command=lambda q=qdata, b=btn, v=display_value: make_question_popup(root, q, b, v, player, ai_player, game_state, score_label)
             )
 
-            btn.grid(row=row_index, column=col, padx=2, pady=2, sticky="nsew")
 
             btn.grid(row=row_index, column=col, padx=2, pady=2, sticky="nsew")
 
