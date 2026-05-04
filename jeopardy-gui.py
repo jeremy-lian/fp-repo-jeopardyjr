@@ -448,13 +448,13 @@ def show_start_screen():
     # Instructions shown befroe the game starts
     instructions = (
         "How to Play:\n\n"
-        "1. Choose an AI difficuulty level.\n"
+        "1. Choose an AI difficulty level.\n"
         "2. Pick a category and dollar amount from the board.\n"
-        "3. Type you answer into the answer box.\n"
+        "3. Type your answer into the answer box.\n"
         "4. If your answer is correct you gain points.\n"
         "5. If your answer is wrong. you lose points.\n"
         "6. After your turn, an AI will choose a question.\n"
-        "7. One question ay be a Daily Double, where you choose your wager.\n"
+        "7. One question will be a Daily Double. For this question, you will be able to choose a wager.\n"
         "8. After all board questions are finished, Final Jeopardy begins.\n\n"
         "Try to finish with a higher score than the AI!"
     )
